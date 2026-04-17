@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hold'em · minimal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: #faf9f6;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #1a1a1a;
+        }
+
+        .game-container {
+            max-width: 1200px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            padding: 32px;
+            border: 1px solid #e8e4df;
+        }
+
+        /* Lobby styles */
+        .lobby-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        h1 {
+            font-weight: 400;
+            font-size: 28px;
+            letter-spacing: -0.5px;
+            color: #111;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .input-field {
+            flex: 1;
+            min-width: 200px;
+            padding: 14px 18px;
+            border: 1px solid #e0dbd4;
+            border-radius: 40px;
+            font-size: 16px;
+            background: #ffffff;
+            outline: none;
+            transition: border 0.15s;
+            font-family: inherit;
+        }
+
+        .input-field:focus {
+            border-color: #1a1a1a;
+        }
+
+        .btn {
+            background: #1a1a1a;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 40px;
+            font-size: 15px;
+            font-weight: 450;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid #1a1a1a;
+            white-space: nowrap;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #1a1a1a;
+            border: 1px solid #d4cfc7;
+        }
+
+        .btn-secondary:hover {
+            background: #f5f3f0;
+        }
+
+        .btn:hover {
+            background: #2d2d2d;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .room-code-display {
+            font-family: 'SF Mono', 'Menlo', monospace;
+            background: #f5f3f0;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 18px;
+            border: 1px solid #e0dcd5;
+        }
+
+        /* Table styles */
+        .community-area {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 24px 0 32px;
+            padding: 16px 0;
+            border-bottom: 1px solid #ece8e2;
+        }
+
+        .card {
+            width: 80px;
+            height: 112px;
+            background: #ffffff;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 0 0 1px #e0dbd3;
+            font-weight: 500;
+            font-size: 28px;
+            color: #111;
+            border: 1px solid #f0ece6;
+        }
+
+        .card.back {
+            background: #f0ece6;
+            box-shadow: inset 0 0 0 1px #ddd8d0;
+            border: 1px solid #e2ddd5;
+            color: #999;
+        }
+
+        .card-rank {
+            font-size: 24px;
+            line-height: 1.2;
+            margin-top: 4px;
+            font-weight: 450;
+        }
+
+        .card-suit {
+            font-size: 36px;
+            line-height: 1;
+        }
+
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin: 24px 0 16px;
+        }
+
+        .player-card {
+            background: #faf9f7;
+            border-radius: 20px;
+            padding: 16px 10px 12px;
+            border: 1px solid #e8e3dc;
+            text-align: center;
+        }
+
+        .player-current {
+            border: 2px solid #1a1a1a;
+            background: #ffffff;
+        }
+
+        .player-name {
+            font-weight: 500;
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 4px;
+            margin-bottom: 8px;
+        }
+
+        .hole-cards {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin: 8px 0;
+        }
+
+        .hole-cards .card {
+            width: 56px;
+            height: 80px;
+            font-size: 20px;
+        }
+
+        .hole-cards .card .card-rank { font-size: 18px; }
+        .hole-cards .card .card-suit { font-size: 28px; }
+
+        .player-badge {
+            font-size: 12px;
+            color: #666;
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 28px 0 8px;
+        }
+
+        .pot-info {
+            text-align: center;
+            font-size: 20px;
+            margin: 12px 0 4px;
+            font-weight: 450;
+        }
+
+        .status-text {
+            text-align: center;
+            color: #666;
+            margin-top: 16px;
+            font-size: 14px;
+        }
+
+        .dealer-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #1a1a1a;
+            border-radius: 8px;
+            margin-left: 6px;
+        }
+
+        .connection-status {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            font-size: 12px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container" id="app">
+    <!-- Lobby View -->
+    <div id="lobby-view" class="lobby-panel">
+        <div style="display:flex; justify-content:space-between; align-items:baseline;">
+            <h1>hold'em</h1>
+            <span style="color:#999; font-weight:300;">minimal</span>
+        </div>
+        <div style="display:flex; flex-direction: column; gap:18px;">
+            <div class="input-group">
+                <input type="text" id="player-name-input" class="input-field" placeholder="your name" value="Player" maxlength="12">
+            </div>
+            <div class="input-group">
+                <button id="create-room-btn" class="btn">+ create room</button>
+                <div style="display:flex; gap:8px; flex:2;">
+                    <input type="text" id="room-code-input" class="input-field" placeholder="room code" maxlength="6" style="text-transform:uppercase;">
+                    <button id="join-room-btn" class="btn btn-secondary">join</button>
+                </div>
+            </div>
+            <p style="color:#999; font-size:14px; margin-top:8px;">share the room code — up to 6 players</p>
+        </div>
+    </div>
+
+    <!-- Table View -->
+    <div id="table-view" style="display: none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <h1 style="font-size:24px;">table</h1>
+            <div><span class="room-code-display" id="current-room-code">······</span></div>
+        </div>
+        
+        <div class="pot-info">
+            pot <span id="pot-display">0</span>
+        </div>
+
+        <div class="community-area" id="community-cards-container"></div>
+
+        <div class="players-grid" id="players-container"></div>
+
+        <div class="action-bar">
+            <button class="btn btn-secondary" id="fold-action" disabled>fold</button>
+            <button class="btn btn-secondary" id="call-action" disabled>check</button>
+            <button class="btn" id="raise-action" disabled>raise 20</button>
+            <button class="btn btn-secondary" id="leave-room-btn">leave</button>
+        </div>
+        <div class="status-text" id="game-status-message">waiting for players...</div>
+        <div style="display:flex; justify-content:center; margin-top:16px;">
+            <button class="btn btn-secondary" id="start-game-btn" disabled>start hand</button>
+        </div>
+    </div>
+    <div class="connection-status" id="connection-status">● connecting</div>
+</div>
+
+<script>
+    (function(){
+        // CHANGE THIS to your Render URL after deployment
+        const WS_URL = window.location.hostname === 'localhost' 
+            ? 'ws://localhost:8080'
+            : 'wss://YOUR_RENDER_SERVER.onrender.com'; // You'll update this after Step 7
+        
+        let socket = null;
+        let roomCode = null;
+        let playerId = null;
+        let playerName = 'Player';
+        let gameState = {
+            players: [],
+            communityCards: [],
+            pot: 0,
+            currentBet: 0,
+            phase: 'lobby',
+            dealerIdx: 0,
+            currentTurn: null,
+            myCards: [],
+            handActive: false
+        };
+
+        // UI elements
+        const lobbyView = document.getElementById('lobby-view');
+        const tableView = document.getElementById('table-view');
+        const playerNameInput = document.getElementById('player-name-input');
+        const createRoomBtn = document.getElementById('create-room-btn');
+        const joinRoomBtn = document.getElementById('join-room-btn');
+        const roomCodeInput = document.getElementById('room-code-input');
+        const leaveRoomBtn = document.getElementById('leave-room-btn');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const foldBtn = document.getElementById('fold-action');
+        const callBtn = document.getElementById('call-action');
+        const raiseBtn = document.getElementById('raise-action');
+        const potDisplay = document.getElementById('pot-display');
+        const statusMsg = document.getElementById('game-status-message');
+        const communityDiv = document.getElementById('community-cards-container');
+        const playersDiv = document.getElementById('players-container');
+        const currentRoomSpan = document.getElementById('current-room-code');
+        const connStatus = document.getElementById('connection-status');
+
+        // WebSocket connection
+        function connectWebSocket() {
+            connStatus.textContent = '● connecting';
+            socket = new WebSocket(WS_URL);
+            
+            socket.onopen = () => {
+                console.log('Connected to server');
+                connStatus.textContent = '● connected';
+                connStatus.style.color = '#4a9e4a';
+            };
+            
+            socket.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                handleServerMessage(msg);
+            };
+            
+            socket.onclose = () => {
+                connStatus.textContent = '● disconnected';
+                connStatus.style.color = '#c44';
+                setTimeout(connectWebSocket, 3000); // Reconnect after 3 seconds
+            };
+            
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                connStatus.textContent = '● error';
+                connStatus.style.color = '#c44';
+            };
+        }
+
+        function sendMessage(data) {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify(data));
+            } else {
+                console.warn('Socket not ready');
+            }
+        }
+
+        function handleServerMessage(msg) {
+            switch(msg.type) {
+                case 'room-created':
+                    roomCode = msg.roomCode;
+                    playerId = msg.playerId;
+                    currentRoomSpan.textContent = roomCode;
+                    switchToTableView();
+                    statusMsg.textContent = `room created · code: ${roomCode}`;
+                    break;
+                case 'room-joined':
+                    roomCode = msg.roomCode;
+                    playerId = msg.playerId;
+                    currentRoomSpan.textContent = roomCode;
+                    switchToTableView();
+                    statusMsg.textContent = `joined room ${roomCode}`;
+                    break;
+                case 'state-update':
+                    updateGameState(msg.state);
+                    renderTable();
+                    break;
+                case 'error':
+                    alert(msg.message);
+                    break;
+            }
+        }
+
+        function switchToTableView() {
+            lobbyView.style.display = 'none';
+            tableView.style.display = 'block';
+            playerName = playerNameInput.value.trim() || 'Player';
+            sendMessage({ 
+                type: 'set-name', 
+                name: playerName 
+            });
+        }
+
+        function updateGameState(state) {
+            gameState = state;
+            
+            const me = state.players.find(p => p.id === playerId);
+            if (me) gameState.myCards = me.cards || [];
+            
+            const isMyTurn = (state.currentTurn === playerId);
+            const active = state.handActive;
+            
+            foldBtn.disabled = !isMyTurn || !active;
+            callBtn.disabled = !isMyTurn || !active;
+            raiseBtn.disabled = !isMyTurn || !active;
+            
+            if (isMyTurn && active) {
+                const callAmt = state.currentBet - (me?.currentBet || 0);
+                callBtn.textContent = callAmt === 0 ? 'check' : `call ${callAmt}`;
+            } else {
+                callBtn.textContent = 'check';
+            }
+            
+            startGameBtn.disabled = (state.players.length < 2) || state.handActive;
+            potDisplay.textContent = state.pot;
+            
+            if (state.phase === 'lobby' && !state.handActive) {
+                if (state.players.length < 2) {
+                    statusMsg.textContent = 'waiting for more players...';
+                } else {
+                    statusMsg.textContent = 'ready to start';
+                }
+            }
+        }
+
+        function renderTable() {
+            renderCommunityCards();
+            renderPlayers();
+        }
+
+        function renderCommunityCards() {
+            let html = '';
+            for (let i = 0; i < 5; i++) {
+                const card = gameState.communityCards[i];
+                if (card) {
+                    html += renderCard(card);
+                } else {
+                    html += `<div class="card back"></div>`;
+                }
+            }
+            communityDiv.innerHTML = html;
+        }
+
+        function renderCard(card) {
+            return `<div class="card"><span class="card-rank">${card.rank}</span><span class="card-suit">${card.suit}</span></div>`;
+        }
+
+        function renderPlayers() {
+            let html = '';
+            gameState.players.forEach((p, idx) => {
+                const isMe = p.id === playerId;
+                const isTurn = gameState.currentTurn === p.id;
+                const dealerMark = gameState.dealerIdx === idx ? '<span class="dealer-dot"></span>' : '';
+                
+                let cardsHtml = '';
+                if (isMe && p.cards && p.cards.length) {
+                    p.cards.forEach(c => { cardsHtml += renderCard(c); });
+                } else {
+                    cardsHtml = `<div class="card back"></div><div class="card back"></div>`;
+                }
+                
+                const betText = p.currentBet > 0 ? `bet ${p.currentBet}` : '';
+                const statusText = p.folded ? 'folded' : betText;
+                
+                html += `<div class="player-card ${isTurn ? 'player-current' : ''}">
+                    <div class="player-name">
+                        <span>${p.name || 'player'}${dealerMark}</span>
+                        <span style="color:#666;">${p.stack}</span>
+                    </div>
+                    <div class="hole-cards">${cardsHtml}</div>
+                    <div class="player-badge">${statusText}</div>
+                </div>`;
+            });
+            playersDiv.innerHTML = html;
+        }
+
+        // Event listeners
+        createRoomBtn.addEventListener('click', () => {
+            playerName = playerNameInput.value.trim() || 'Player';
+            sendMessage({ type: 'create-room', name: playerName });
+        });
+
+        joinRoomBtn.addEventListener('click', () => {
+            const code = roomCodeInput.value.trim().toUpperCase();
+            if (!code) return;
+            playerName = playerNameInput.value.trim() || 'Player';
+            sendMessage({ type: 'join-room', roomCode: code, name: playerName });
+        });
+
+        leaveRoomBtn.addEventListener('click', () => {
+            sendMessage({ type: 'leave-room' });
+            lobbyView.style.display = 'flex';
+            tableView.style.display = 'none';
+            roomCode = null;
+        });
+
+        startGameBtn.addEventListener('click', () => {
+            sendMessage({ type: 'start-hand' });
+        });
+
+        foldBtn.addEventListener('click', () => {
+            sendMessage({ type: 'player-action', action: 'fold' });
+        });
+
+        callBtn.addEventListener('click', () => {
+            sendMessage({ type: 'player-action', action: 'call' });
+        });
+
+        raiseBtn.addEventListener('click', () => {
+            sendMessage({ type: 'player-action', action: 'raise', amount: 20 });
+        });
+
+        // Initialize
+        connectWebSocket();
+    })();
+</script>
+</body>
+</html>
